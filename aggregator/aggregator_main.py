@@ -30,7 +30,7 @@ origins = [
     "http://localhost:8001",
     "http://127.0.0.1:8001",
     "http://0.0.0.0:8001",
-    "https://developer-aggregator.vercel.app"
+    "ttps://developer-aggregator-kuqj.vercel.app"
 ]
 
 app.add_middleware(
