@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Dashboard</title>
+    <style>
+        /* --- CSS Reset & Basic Setup --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+        :root {
+            --bg-primary: #121826;
+            --bg-secondary: #1A202E;
+            --border-color: #31394a;
+            --text-primary: #E5E7EB;
+            --text-secondary: #A0AEC0;
+            --accent-color: #FFB703;
+            --error-color: #e53e3e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* --- Main Layout --- */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 275px 1fr 300px;
+            grid-template-rows: auto 1fr;
+            gap: 24px;
+            padding: 24px;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            grid-column: 1 / -1; /* Span all columns */
+        }
+        
+        .main-content {
+            grid-column: 2 / 3;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .left-sidebar, .right-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        
+        /* --- Reusable Card Component --- */
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-header i {
+            color: var(--accent-color);
+        }
+
+        .card-content {
+           flex-grow: 1; /* Allows content to fill card height */
+        }
+
+        .loading-state, .error-state {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .error-state {
+            color: var(--error-color);
+        }
+
+
+        /* --- Specific Widget Styling --- */
+        
+        /* Header */
+        .dashboard-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .dashboard-header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        
+        /* Calendar */
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .calendar-header span {
+            font-weight: 600;
+        }
+        .calendar-day-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .calendar-day {
+            padding: 4px;
+            font-size: 0.9rem;
+            cursor: default;
+        }
+        .calendar-day.current-day {
+            background-color: var(--accent-color);
+            color: var(--bg-primary);
+            border-radius: 50%;
+            font-weight: 700;
+        }
+        .calendar-day.empty {
+            opacity: 0.3;
+        }
+
+        /* Generic List Item */
+        .list-item {
+            margin-bottom: 16px;
+        }
+        .list-item:last-child {
+            margin-bottom: 0;
+        }
+        .list-item a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: block;
+        }
+        .list-item a:hover {
+            color: var(--accent-color);
+        }
+        .list-item-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .list-item-meta span {
+            margin-right: 12px;
+        }
+
+        /* Codeforces Card */
+        .cf-stat {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 8px;
+        }
+        .cf-stat:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .cf-stat-label { color: var(--text-secondary); }
+        .cf-stat-value { font-weight: 600; }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 250px 1fr;
+                grid-template-rows: auto;
+            }
+            .right-sidebar {
+                grid-column: 1 / -1; /* Stack right sidebar below */
+                grid-row: 3;
+            }
+        }
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr; /* Single column */
+                padding: 16px;
+            }
+            .left-sidebar, .main-content, .right-sidebar {
+                grid-column: 1 / -1;
+                grid-row: auto;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <!-- HEADER -->
+        <header class="dashboard-header">
+            <h1>Developer Dashboard</h1>
+            <p>Your personalized development workspace</p>
+        </header>
+
+        <!-- LEFT SIDEBAR -->
+        <aside class="left-sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <span>Calendar</span>
+                </div>
+                <div class="card-content" id="calendar-widget">
+                    <!-- Calendar will be generated by JS -->
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-hacker-news"></i>
+                    <span>Hacker News</span>
+                </div>
+                <div class="card-content" id="hackernews-feed">
+                    <div class="loading-state">Loading stories...</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-kaggle"></i>
+                    <span>Kaggle Datasets</span>
+                </div>
+                <div class="card-content" id="kaggle-feed">
+                     <div class="loading-state">Loading datasets...</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-dev"></i>
+                    <span>DEV.to Articles</span>
+                </div>
+                <div class="card-content" id="devto-feed">
+                     <div class="loading-state">Loading articles...</div>
+                </div>
+            </div>
+             <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-stack-overflow"></i>
+                    <span>Stack Overflow</span>
+                </div>
+                <div class="card-content" id="stackoverflow-feed">
+                     <div class="loading-state">Loading questions...</div>
+                </div>
+            </div>
+             <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-reddit-alien"></i>
+                    <span>Reddit /r/programming</span>
+                </div>
+                <div class="card-content" id="reddit-feed">
+                     <div class="loading-state">Loading posts...</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR -->
+        <aside class="right-sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-github"></i>
+                    <span>GitHub Repositories</span>
+                </div>
+                <div class="card-content" id="github-repos">
+                    <div class="loading-state">Loading repos...</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-python"></i>
+                    <span>PyPI Packages</span>
+                </div>
+                <div class="card-content" id="pypi-feed">
+                     <div class="loading-state">Loading packages...</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-npm"></i>
+                    <span>npm Packages</span>
+                </div>
+                <div class="card-content" id="npm-feed">
+                     <div class="loading-state">Loading packages...</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-brands fa-gitlab"></i>
+                    <span>GitLab Projects</span>
+                </div>
+                <div class="card-content" id="gitlab-projects">
+                     <div class="loading-state">Loading projects...</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-solid fa-code"></i>
+                    <span>Codeforces Stats</span>
+                </div>
+                <div class="card-content" id="codeforces-stats">
+                    <div class="loading-state">Loading stats...</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const FASTAPI_BASE_URL = "http://127.0.0.1:8000";
+        const CODEFORCES_HANDLE = "likhithavinash"; // <-- CHANGE THIS
+
+        // --- Helper Functions ---
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${FASTAPI_BASE_URL}${endpoint}`, { mode: 'cors' });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to fetch data from ${endpoint}:`, error);
+                return null;
+            }
+        }
+        
+        function renderList(container, data, keyMap, errorMessage) {
+            if (!data || data.length === 0) {
+                container.innerHTML = `<div class="error-state">${errorMessage}</div>`;
+                return;
+            }
+            
+            const html = data.slice(0, 7).map(item => {
+                const url = typeof keyMap.url === 'function' ? keyMap.url(item) : (item[keyMap.url] || '#');
+                return `
+                    <div class="list-item">
+                        <a href="${url}" target="_blank" rel="noopener noreferrer">${item[keyMap.title] || 'No Title'}</a>
+                        ${keyMap.meta ? `<div class="list-item-meta">${keyMap.meta(item)}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // --- Widget Rendering Functions ---
+
+        function renderCalendar() {
+            const container = document.getElementById('calendar-widget');
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const today = now.getDate();
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const monthName = now.toLocaleString('default', { month: 'long' });
+            
+            let html = `
+                <div class="calendar-header">
+                    <span>${monthName} ${year}</span>
+                </div>
+                <div class="calendar">
+            `;
+
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayNames.forEach(day => {
+                html += `<div class="calendar-day-name">${day}</div>`;
+            });
+            
+            // Add empty slots for the first day
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                html += `<div class="calendar-day empty"></div>`;
+            }
+
+            // Add days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const isCurrent = day === today ? 'current-day' : '';
+                html += `<div class="calendar-day ${isCurrent}">${day}</div>`;
+            }
+            
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        async function renderHackerNews() {
+            const container = document.getElementById('hackernews-feed');
+            const data = await fetchData('/hackernews/topstories');
+            renderList(container, data, {
+                title: 'title',
+                url: 'url',
+                meta: item => `
+                    <span><i class="fa-solid fa-arrow-up"></i> ${item.score || 0}</span>
+                    <span><i class="fa-solid fa-comments"></i> ${item.descendants || 0}</span>
+                `
+            }, "Could not load Hacker News stories.");
+        }
+        
+        async function renderDevTo() {
+            const container = document.getElementById('devto-feed');
+            const data = await fetchData('/devto/articles');
+            renderList(container, data, {
+                title: 'title',
+                url: 'url',
+                meta: item => `
+                    <span><i class="fa-solid fa-heart"></i> ${item.public_reactions_count || 0}</span>
+                    <span><i class="fa-solid fa-comments"></i> ${item.comments_count || 0}</span>
+                `
+            }, "Could not load DEV.to articles.");
+        }
+        
+        async function renderGitHub() {
+    const container = document.getElementById('github-repos');
+    
+    // Dynamically change the card's title
+    container.previousElementSibling.querySelector('span').innerText = 'GitHub Issues & PRs';
+
+    // This part is correct and fetches both lists
+    const [issues, pulls] = await Promise.all([
+        fetchData('/github/issues'),
+        fetchData('/github/pulls') 
+    ]);
+
+    const combinedData = [...(issues || []), ...(pulls || [])];
+    
+    renderList(container, combinedData, {
+        title: 'title',
+        url: 'html_url',
+        // --- THIS IS THE PART THAT HAS BEEN FIXED ---
+        meta: item => {
+            const icon = item.pull_request 
+                ? '<i class="fa-solid fa-code-pull-request"></i>' 
+                : '<i class="fa-solid fa-circle-dot"></i>';
+            
+            // This is the new, smarter way to find the repository name.
+            // It first checks for the `repository` object, and if it's missing,
+            // it extracts the name from the `repository_url`.
+            let repoName = 'N/A';
+            if (item.repository && item.repository.full_name) {
+                repoName = item.repository.full_name;
+            } else if (item.repository_url) {
+                // Extracts "owner/repo" from a URL like "https://api.github.com/repos/owner/repo"
+                repoName = item.repository_url.split('/').slice(-2).join('/');
+            }
+
+            return `<span>${icon} ${repoName}</span>`;
+        }
+        // --- END OF FIX ---
+    }, "Could not load GitHub issues or PRs.");
+}
+        
+        async function renderGitLab() {
+            const container = document.getElementById('gitlab-projects');
+            const data = await fetchData('/gitlab/projects');
+            function renderList(container, data, keyMap, errorMessage) {
+    // Case 1: The fetch failed completely (data is null). Show a red error.
+    if (data === null) {
+        container.innerHTML = `<div class="error-state">${errorMessage}</div>`;
+        return;
+    }
+
+    // Case 2: The fetch succeeded but returned an empty list. Show a neutral info message.
+    if (data.length === 0) {
+        container.innerHTML = `<div class="Not Found">No items found.</div>`;
+        return;
+    }
+    
+    // Case 3: The fetch succeeded and returned data. Render the list.
+    const html = data.slice(0, 7).map(item => {
+        const url = typeof keyMap.url === 'function' ? keyMap.url(item) : (item[keyMap.url] || '#');
+        return `
+            <div class="list-item">
+                <a href="${url}" target="_blank" rel="noopener noreferrer">${item[keyMap.title] || 'No Title'}</a>
+                ${keyMap.meta ? `<div class="list-item-meta">${keyMap.meta(item)}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = html;
+    }
+}      
+        async function renderStackOverflow() {
+    const container = document.getElementById('stackoverflow-feed');
+    
+    // --- CHANGE: Call the correct '/featured' endpoint ---
+    const data = await fetchData('/stackoverflow/featured');
+    
+    renderList(container, data, {
+        title: 'title',
+        url: 'link',
+        // --- CHANGE: Display the correct data (bounty and answers) ---
+        meta: item => `
+             <span><i class="fa-solid fa-trophy"></i> Bounty: ${item.bounty_amount || 0}</span>
+             <span><i class="fa-solid fa-comments"></i> Answers: ${item.answer_count || 0}</span>
+        `
+    }, "Could not load Stack Overflow questions.");
+}
+
+        async function renderCodeforces() {
+            const container = document.getElementById('codeforces-stats');
+            if (!CODEFORCES_HANDLE || CODEFORCES_HANDLE === "YourCodeforcesHandle") {
+                container.innerHTML = `<div class="error-state">Please set your Codeforces handle in the script.</div>`;
+                return;
+            }
+
+            const data = await fetchData(`/codeforces/userinfo/${CODEFORCES_HANDLE}`);
+            if (!data || data.rating === undefined) {
+                container.innerHTML = `<div class="error-state">Could not load stats for "${CODEFORCES_HANDLE}".</div>`;
+                return;
+            }
+            
+            const formatRank = (rank) => rank ? rank.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'N/A';
+
+            container.innerHTML = `
+                <div class="cf-stat">
+                    <span class="cf-stat-label">Handle</span>
+                    <span class="cf-stat-value" style="color: var(--accent-color);">${CODEFORCES_HANDLE}</span>
+                </div>
+                <div class="cf-stat">
+                    <span class="cf-stat-label">Rating</span>
+                    <span class="cf-stat-value">${data.rating || 'N/A'}</span>
+                </div>
+                <div class="cf-stat">
+                    <span class="cf-stat-label">Max Rating</span>
+                    <span class="cf-stat-value">${data.maxRating || 'N/A'}</span>
+                </div>
+                <div class="cf-stat">
+                    <span class="cf-stat-label">Rank</span>
+                    <span class="cf-stat-value">${formatRank(data.rank)}</span>
+                </div>
+                <div class="cf-stat">
+                    <span class="cf-stat-label">Max Rank</span>
+                    <span class="cf-stat-value">${formatRank(data.maxRank)}</span>
+                </div>
+            `;
+        }
+
+
+        // --- NEW RENDER FUNCTIONS ---
+        async function renderKaggle() {
+            const container = document.getElementById('kaggle-feed');
+            const data = await fetchData('/kaggle/datasets');
+            renderList(container, data, {
+                title: 'title',
+                url: 'url',
+                meta: item => `<span>Ref: ${item.ref}</span>`
+            }, "Could not load Kaggle datasets.");
+        }
+
+        async function renderReddit() {
+            const container = document.getElementById('reddit-feed');
+            const data = await fetchData('/reddit/top/programming');
+            renderList(container, data, {
+                title: 'title',
+                url: item => `https://www.reddit.com${item.permalink}`,
+                meta: item => `
+                    <span><i class="fa-solid fa-arrow-up"></i> ${item.score || 0}</span>
+                    <span><i class="fa-solid fa-comments"></i> ${item.num_comments || 0}</span>
+                `
+            }, "Could not load Reddit posts.");
+        }
+
+        async function renderPyPI() {
+            const container = document.getElementById('pypi-feed');
+            const data = await fetchData('/pypi/fastapi');
+
+            if (!data || !data.name) {
+                container.innerHTML = `<div class="error-state">Could not load PyPI package details.</div>`;
+                return;
+            }
+
+    // Build HTML for the single package object
+            container.innerHTML = `
+                <div class="list-item">
+                    <a href="https://pypi.org/project/${data.name}" target="_blank" rel="noopener noreferrer">
+                        
+                        ${data.name} (${data.version})
+                </a>
+                <div class="list-item-meta">
+                    <span>${data.summary || 'No summary available.'}</span>
+                </div>
+            </div>
+        `;
+    }
+        async function renderNpm() {
+            const container = document.getElementById('npm-feed');
+    // The endpoint is being misinterpreted, let's call the endpoint for a known package like 'react'
+            const data = await fetchData('/npm/react'); 
+    
+            console.log("NPM Data Received:", data); // You can keep this for debugging
+
+            if (!data || !data.name) {
+            container.innerHTML = `<div class="error-state">Could not load npm package details.</div>`;
+            return;
+    }
+
+    // Since we get a single object, we build the HTML directly
+            container.innerHTML = `
+                <div class="list-item">
+                    <a href="https://www.npmjs.com/package/${data.name}" target="_blank" rel="noopener noreferrer">
+                        ${data.name} (${data.latest_version})
+                </a>
+                <div class="list-item-meta">
+                    <span>${data.description || 'No description available.'}</span>
+                </div>
+            </div>
+            `;
+        }
+
+        // --- Initial Load ---
+        // --- Initial Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+    // This block just needs to call all the render functions.
+    // Each function will then fetch its own data.
+        renderCalendar();
+        renderHackerNews();
+        renderDevTo();
+        renderGitHub();
+        renderCodeforces();
+        renderGitLab();
+        renderStackOverflow();
+        renderKaggle();
+        renderReddit();
+        renderPyPI();
+        renderNpm();
+});
+
+    </script>
+</body>
+</html>
+
